@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Airline Pricing Game</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1b1f24;--mute:#5d6672;--line:#e3e6ea;--me:#1f6feb;--riv:#d9480f;--good:#2b8a3e;--bad:#c92a2a;--soft:#eef4ff}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.45}
+.wrap{max-width:900px;margin:0 auto;padding:16px}
+h1{font-size:1.5rem;margin:.2rem 0}
+h2{font-size:1.15rem;margin:0 0 .6rem}
+.sub{color:var(--mute);margin:0 0 1rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+.tabs{display:flex;gap:6px;margin-bottom:14px}
+.tab{flex:1;padding:10px;border:1px solid var(--line);background:#fff;border-radius:10px;font-weight:600;cursor:pointer;font-size:1rem}
+.tab.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.fact{background:var(--bg);border-radius:8px;padding:8px 10px}
+.fact b{display:block;font-size:1.05rem}
+.fact span{font-size:.82rem;color:var(--mute)}
+.hint{background:var(--soft);border-radius:8px;padding:10px 12px;font-size:.92rem}
+button.go{background:var(--me);color:#fff;border:0;border-radius:10px;padding:12px 18px;font-size:1rem;font-weight:600;cursor:pointer}
+button.go:disabled{opacity:.4;cursor:default}
+button.ghost{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer;font-size:.9rem}
+.steps{display:flex;gap:6px;margin-bottom:12px}
+.step{flex:1;text-align:center;padding:8px 4px;border-radius:8px;background:var(--bg);font-size:.85rem;color:var(--mute)}
+.step.now{background:var(--me);color:#fff;font-weight:600}
+.step.done{background:#dbe7fb;color:var(--ink)}
+.pricebox{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:10px 0}
+input[type=range]{flex:1;min-width:180px;accent-color:var(--me)}
+input[type=number]{width:90px;font-size:1.1rem;padding:6px;border:1px solid var(--line);border-radius:8px}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th,td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:right}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--mute);font-weight:600;font-size:.82rem}
+.me{color:var(--me);font-weight:600}.riv{color:var(--riv);font-weight:600}
+.big{font-size:2rem;font-weight:700}
+.pos{color:var(--good)}.neg{color:var(--bad)}
+.poll{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin:8px 0}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:#fff;padding:7px 14px;cursor:pointer;font-size:.9rem}
+.seg button.on{background:var(--ink);color:#fff}
+.bars{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.barrow{display:grid;grid-template-columns:70px 1fr 70px;gap:8px;align-items:center;font-size:.85rem}
+.bar{height:14px;background:var(--bg);border-radius:7px;overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.sl{display:grid;grid-template-columns:110px 1fr 60px;gap:10px;align-items:center;margin:6px 0}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+svg text{font-family:inherit}
+.hidden{display:none}
+.lesson li{margin-bottom:6px}
+small{color:var(--mute)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>✈️ Airline Pricing Game</h1>
+  <p class="sub">You manage ticket prices for one airline on a route with a single competitor. Your goal is to maximize profit.</p>
+
+  <div class="tabs">
+    <button class="tab on" data-tab="play">Play the game</button>
+    <button class="tab" data-tab="explore">Explore (sandbox)</button>
+  </div>
+
+  <!-- ================= PLAY ================= -->
+  <section id="play">
+    <div class="card">
+      <h2>The setup</h2>
+      <div class="facts">
+        <div class="fact"><b>1,200 seats</b><span>you, and 1,200 for your rival</span></div>
+        <div class="fact"><b>3 booking phases</b><span>3 months, 1 month, 5 days before departure</span></div>
+        <div class="fact"><b>€4</b><span>variable cost per passenger (airport tax)</span></div>
+        <div class="fact"><b>€48,380</b><span>fixed cost of flying the plane</span></div>
+      </div>
+      <p class="hint" style="margin-top:10px">If both airlines charge <b>€50</b> in every phase, each sells about <b>1,100 seats</b>.<br>
+      <b>Leisure</b> travelers book early and are very price-sensitive. <b>Business</b> travelers book late and care much less about price.
+      You set one price per phase. The rival sets its own price at the same time, and you see it only after the phase ends. Seats you sell early are no longer available later.</p>
+    </div>
+
+    <div class="card" id="pollCard">
+      <h2>Before you play: what's your prediction?</h2>
+      <p class="sub" style="margin:0 0 6px">Should your price be high or low in each phase?</p>
+      <div id="poll"></div>
+      <button class="go" id="startBtn" style="margin-top:8px">Start the game →</button>
+    </div>
+
+    <div class="card hidden" id="gameCard">
+      <div class="steps" id="steps"></div>
+      <h2 id="phaseTitle"></h2>
+      <p class="sub" id="phaseDesc" style="margin-bottom:4px"></p>
+      <div class="bars" id="seatBars"></div>
+      <div class="pricebox">
+        <label for="pRange"><b>Your price (€)</b></label>
+        <input type="range" id="pRange" min="0" max="400" step="5" value="50">
+        <input type="number" id="pNum" min="0" max="400" step="5" value="50">
+        <button class="go" id="setBtn">Set price</button>
+      </div>
+      <table id="histTbl" class="hidden">
+        <thead><tr><th>Phase</th><th>Your price</th><th>Rival price</th><th>You sold</th><th>Rival sold</th><th>Your profit so far*</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <small id="histNote" class="hidden">*Revenue minus €4 per passenger so far, before the €48,380 fixed cost.</small>
+    </div>
+
+    <div class="card hidden" id="endCard">
+      <h2>Final results</h2>
+      <div class="big" id="finalProfit"></div>
+      <p class="sub" id="finalLine"></p>
+      <table id="cmpTbl"><thead><tr><th>Strategy</th><th>Prices (3m / 1m / 5d)</th><th>Seats sold</th><th>Profit</th></tr></thead><tbody></tbody></table>
+      <div id="pollCompare" style="margin-top:12px"></div>
+      <div class="hint" style="margin-top:12px">
+        <b>What's going on?</b>
+        <ul class="lesson" style="margin:6px 0 0;padding-left:18px">
+          <li><b>Price discrimination over time:</b> early buyers are mostly leisure travelers, whose demand is elastic, so the price should be low. Late buyers are mostly business travelers, whose demand is inelastic, so the price should be high.</li>
+          <li><b>Capacity is the twist:</b> each seat sold cheaply to a leisure traveler is one seat you can't sell later to a business traveler.</li>
+          <li><b>Becoming the monopolist:</b> if you let your rival sell out its seats in the first two phases, it has no seats left in the last phase. You are then the only airline selling to business travelers, who are willing to pay a lot.</li>
+        </ul>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="go" id="againBtn">Play again</button>
+        <button class="ghost" id="toExplore">Open the sandbox with my prices →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= EXPLORE ================= -->
+  <section id="explore" class="hidden">
+    <div class="card">
+      <h2>Your prices</h2>
+      <div class="sl"><span>3 months out</span><input type="range" min="0" max="400" step="5" id="e0"><b id="e0v"></b></div>
+      <div class="sl"><span>1 month out</span><input type="range" min="0" max="400" step="5" id="e1"><b id="e1v"></b></div>
+      <div class="sl"><span>5 days out</span><input type="range" min="0" max="400" step="5" id="e2"><b id="e2v"></b></div>
+      <div class="chips">
+        <button class="ghost" data-pre="50,50,50">Flat €50</button>
+        <button class="ghost" data-pre="40,60,100">Low → high</button>
+        <button class="ghost" data-pre="30,30,30">Undercut (€30)</button>
+        <button class="ghost" data-pre="200,200,300">Let rival sell out</button>
+        <button class="ghost" id="bestBtn">Best possible</button>
+      </div>
+      <details style="margin-top:6px"><summary style="cursor:pointer;color:var(--mute)">Rival's prices (instructor setting)</summary>
+        <div class="sl"><span>3 months out</span><input type="range" min="0" max="400" step="5" id="r0"><b id="r0v"></b></div>
+        <div class="sl"><span>1 month out</span><input type="range" min="0" max="400" step="5" id="r1"><b id="r1v"></b></div>
+        <div class="sl"><span>5 days out</span><input type="range" min="0" max="400" step="5" id="r2"><b id="r2v"></b></div>
+      </details>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
+        <h2 style="margin:0">Outcome</h2>
+        <div>Your profit: <span class="big" id="eProfit" style="font-size:1.6rem"></span></div>
+      </div>
+      <table style="margin-top:8px"><thead><tr><th>Phase</th><th>You: price</th><th>You: sold</th><th>Rival: price</th><th>Rival: sold</th><th>Your seats left</th><th>Rival seats left</th></tr></thead><tbody id="eTbl"></tbody></table>
+      <p style="margin:8px 0 0;font-size:.9rem" id="eSummary"></p>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <h2 style="margin:0">How profit changes with one price</h2>
+        <div class="seg" id="phaseSeg"><button data-k="0">3 months</button><button data-k="1">1 month</button><button data-k="2" class="on">5 days</button></div>
+      </div>
+      <p class="sub" style="margin:4px 0 0;font-size:.88rem">Your total profit as you vary the price in the selected phase, with your other two prices held at their slider values. The dot is your current choice.</p>
+      <svg id="chart" viewBox="0 0 640 300" style="width:100%;height:auto"></svg>
+    </div>
+  </section>
+
+  <p style="text-align:center;font-size:.8rem;color:var(--mute)">Microeconomic Principles · Price Discrimination (Ch. 15) · Yue Deng, University of San Diego</p>
+</div>
+
+<script>
+// ---------- Model ----------
+const CAP=1200, VC=4, FC=48380, ML=40, MB=300, K=8;
+const POOL=[[2150,110],[1300,330],[430,860]]; // [leisure, business] potential travelers per phase
+const PHASES=["3 months before","1 month before","5 days before"];
+const PHASE_DESC=["Mostly leisure travelers are shopping now, and they are very price-sensitive.",
+ "A mix: some leisure travelers, and business travelers starting to book.",
+ "Mostly business travelers who need this flight and care less about price."];
+let RIVAL=[45,60,100];
+
+function phase(t,pa,pb,ca,cb){
+  let da=0,db=0,sa_=0,sb_=0;
+  for(const [N,m] of [[POOL[t][0],ML],[POOL[t][1],MB]]){
+    const Aa=N*Math.exp(-pa/m), Ab=N*Math.exp(-pb/m);
+    const s=1/(1+Math.exp((pa-pb)/K)), both=Math.min(Aa,Ab);
+    da+=both*s+(Aa-both); db+=both*(1-s)+(Ab-both);
+    sa_+=both*s; sb_+=both*(1-s);
+  }
+  let qa=Math.min(da,ca), qb=Math.min(db,cb);
+  if(da>ca&&da>0) qb=Math.min(cb,db+(da-ca)*(sa_/da));   // turned-away customers spill to the other airline
+  if(db>cb&&db>0) qa=Math.min(ca,da+(db-cb)*(sb_/db));
+  return [qa,qb];
+}
+function run(pa,pb){
+  let ca=CAP,cb=CAP,Ra=0,Rb=0; const rows=[];
+  for(let t=0;t<3;t++){
+    const [qa,qb]=phase(t,pa[t],pb[t],ca,cb);
+    ca-=qa; cb-=qb; Ra+=qa*(pa[t]-VC); Rb+=qb*(pb[t]-VC);
+    rows.push({qa,qb,ca,cb,va:Ra,vb:Rb});
+  }
+  return {pa:Ra-FC,pb:Rb-FC,sa:CAP-ca,sb:CAP-cb,rows};
+}
+let bestCache=null,bestKey="";
+function best(){
+  const key=RIVAL.join();
+  if(bestCache&&bestKey===key) return bestCache;
+  let b=null,bv=-Infinity;
+  for(let x=0;x<=400;x+=10)for(let y=0;y<=400;y+=10)for(let z=0;z<=400;z+=10){
+    const v=run([x,y,z],RIVAL).pa; if(v>bv){bv=v;b=[x,y,z];}
+  }
+  bestCache=b; bestKey=key; return b;
+}
+const eur=v=>(v<0?"−€":"€")+Math.abs(Math.round(v)).toLocaleString();
+const n=v=>Math.round(v).toLocaleString();
+const $=id=>document.getElementById(id);
+
+// ---------- Tabs ----------
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+function showTab(t){
+  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.tab===t));
+  $("play").classList.toggle("hidden",t!=="play"); $("explore").classList.toggle("hidden",t!=="explore");
+  if(t==="explore") renderExplore();
+}
+
+// ---------- Play ----------
+const pred=[null,null,null];
+$("poll").innerHTML=PHASES.map((p,i)=>`<div class="poll"><span>${p} departure</span><div class="seg" data-i="${i}"><button data-v="Low">Low</button><button data-v="High">High</button></div></div>`).join("");
+document.querySelectorAll("#poll .seg").forEach(s=>s.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+  pred[s.dataset.i]=b.dataset.v; s.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
+}));
+let G;
+function newGame(){G={t:0,mine:[],ca:CAP,cb:CAP,v:0,rows:[]};}
+$("startBtn").onclick=()=>{newGame();$("pollCard").classList.add("hidden");$("gameCard").classList.remove("hidden");drawPhase();};
+$("pRange").oninput=e=>$("pNum").value=e.target.value;
+$("pNum").oninput=e=>$("pRange").value=e.target.value;
+function seatBar(label,left,color){
+  const sold=CAP-left;
+  return `<div class="barrow"><span class="${label==='You'?'me':'riv'}">${label}</span><div class="bar"><i style="width:${sold/CAP*100}%;background:${color}"></i></div><span>${n(left)} left</span></div>`;
+}
+function drawPhase(){
+  $("steps").innerHTML=PHASES.map((p,i)=>`<div class="step ${i<G.t?'done':i===G.t?'now':''}">${p.replace(" before","")}</div>`).join("");
+  $("seatBars").innerHTML=seatBar("You",G.ca,"var(--me)")+seatBar("Rival",G.cb,"var(--riv)");
+  $("phaseTitle").textContent=`Phase ${G.t+1}: ${PHASES[G.t]} departure`;
+  $("phaseDesc").textContent=PHASE_DESC[G.t];
+}
+$("setBtn").onclick=()=>{
+  let p=Math.max(0,Math.min(400,+$("pNum").value||0));
+  const [qa,qb]=phase(G.t,p,RIVAL[G.t],G.ca,G.cb);
+  G.ca-=qa; G.cb-=qb; G.v+=qa*(p-VC); G.mine.push(p);
+  const tb=$("histTbl").querySelector("tbody");
+  tb.insertAdjacentHTML("beforeend",`<tr><td>${PHASES[G.t].replace(" before","")}</td><td class="me">€${p}</td><td class="riv">€${RIVAL[G.t]}</td><td>${n(qa)}</td><td>${n(qb)}${G.cb<0.5?' <b class="riv">SOLD OUT</b>':''}</td><td>${eur(G.v)}</td></tr>`);
+  $("histTbl").classList.remove("hidden"); $("histNote").classList.remove("hidden");
+  G.t++;
+  if(G.t<3) drawPhase(); else finish();
+};
+function finish(){
+  $("gameCard").classList.add("hidden"); $("endCard").classList.remove("hidden");
+  const me=run(G.mine,RIVAL), b=best();
+  const fp=$("finalProfit"); fp.textContent=eur(me.pa); fp.className="big "+(me.pa>=0?"pos":"neg");
+  $("finalLine").textContent=`You sold ${n(me.sa)} of 1,200 seats (load factor ${Math.round(me.sa/CAP*100)}%). Your rival earned ${eur(me.pb)}.`;
+  const strat=[["You",G.mine],["Flat €50",[50,50,50]],["Low → high",[40,60,100]],["Best possible",b]];
+  $("cmpTbl").querySelector("tbody").innerHTML=strat.map(([nm,p])=>{const r=run(p,RIVAL);return `<tr${nm==="You"?' class="me"':''}><td>${nm}</td><td>€${p.join(" / €")}</td><td>${n(r.sa)}</td><td class="${r.pa>=0?'pos':'neg'}">${eur(r.pa)}</td></tr>`}).join("");
+  if(pred.some(x=>x)){
+    $("pollCompare").innerHTML=`<b>Your prediction vs. the best strategy:</b> `+PHASES.map((p,i)=>`${p.replace(" before","")}: you said <b>${pred[i]||"—"}</b>, best price €${b[i]}`).join(" · ");
+  }
+}
+$("againBtn").onclick=()=>{
+  $("endCard").classList.add("hidden"); $("histTbl").querySelector("tbody").innerHTML="";
+  $("histTbl").classList.add("hidden"); $("histNote").classList.add("hidden");
+  $("pRange").value=$("pNum").value=50; newGame(); $("gameCard").classList.remove("hidden"); drawPhase();
+};
+$("toExplore").onclick=()=>{G.mine.forEach((p,i)=>$("e"+i).value=p);showTab("explore");};
+
+// ---------- Explore ----------
+let chartPhase=2;
+[0,1,2].forEach(i=>{$("e"+i).value=50;$("r"+i).value=RIVAL[i];$("e"+i).oninput=renderExplore;$("r"+i).oninput=()=>{RIVAL=[0,1,2].map(j=>+$("r"+j).value);renderExplore();};});
+document.querySelectorAll("[data-pre]").forEach(b=>b.onclick=()=>{b.dataset.pre.split(",").forEach((v,i)=>$("e"+i).value=v);renderExplore();});
+$("bestBtn").onclick=()=>{best().forEach((v,i)=>$("e"+i).value=v);renderExplore();};
+document.querySelectorAll("#phaseSeg button").forEach(b=>b.onclick=()=>{chartPhase=+b.dataset.k;document.querySelectorAll("#phaseSeg button").forEach(x=>x.classList.toggle("on",x===b));renderExplore();});
+
+function renderExplore(){
+  const p=[0,1,2].map(i=>+$("e"+i).value);
+  [0,1,2].forEach(i=>{$("e"+i+"v").textContent="€"+p[i];$("r"+i+"v").textContent="€"+RIVAL[i];});
+  const r=run(p,RIVAL);
+  const ep=$("eProfit"); ep.textContent=eur(r.pa); ep.className="big "+(r.pa>=0?"pos":"neg"); ep.style.fontSize="1.6rem";
+  $("eTbl").innerHTML=r.rows.map((x,i)=>`<tr><td>${PHASES[i].replace(" before","")}</td><td class="me">€${p[i]}</td><td>${n(x.qa)}</td><td class="riv">€${RIVAL[i]}</td><td>${n(x.qb)}</td><td>${n(x.ca)}</td><td>${n(x.cb)}${x.cb<0.5?' <b class="riv">✕</b>':''}</td></tr>`).join("");
+  const soldOut=r.rows.findIndex(x=>x.cb<0.5);
+  $("eSummary").innerHTML=`You sell <b>${n(r.sa)}</b> seats; rival sells <b>${n(r.sb)}</b> and earns <b>${eur(r.pb)}</b>.`+
+    (soldOut>=0&&soldOut<2?` <b class="riv">Rival is sold out after ${PHASES[soldOut].replace(" before","")}</b>, so you are the only seller after that.`:"");
+  drawChart(p);
+}
+function drawChart(p){
+  const W=640,H=300,L=62,R=16,T=16,B=40, xs=[],ys=[];
+  for(let x=0;x<=400;x+=5){const q=p.slice();q[chartPhase]=x;xs.push(x);ys.push(run(q,RIVAL).pa);}
+  let ymin=Math.min(...ys,0),ymax=Math.max(...ys,0);const pad=(ymax-ymin)*.08||1000;ymin-=pad;ymax+=pad;
+  const X=v=>L+v/400*(W-L-R), Y=v=>T+(ymax-v)/(ymax-ymin)*(H-T-B);
+  const step=niceStep((ymax-ymin)/5); let g="";
+  for(let v=Math.ceil(ymin/step)*step;v<=ymax;v+=step){g+=`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="${v===0?'#9aa3ad':'#eceef1'}"/><text x="${L-6}" y="${Y(v)+4}" text-anchor="end" font-size="11" fill="#5d6672">${v<0?'−':''}€${Math.abs(v/1000)}k</text>`;}
+  for(let v=0;v<=400;v+=50) g+=`<text x="${X(v)}" y="${H-B+16}" text-anchor="middle" font-size="11" fill="#5d6672">€${v}</text>`;
+  const path=xs.map((x,i)=>(i?"L":"M")+X(x).toFixed(1)+","+Y(ys[i]).toFixed(1)).join("");
+  let bi=0; ys.forEach((v,i)=>{if(v>ys[bi])bi=i;});
+  const cur=run(p,RIVAL).pa;
+  $("chart").innerHTML=g+
+    `<text x="${(L+W-R)/2}" y="${H-6}" text-anchor="middle" font-size="12" fill="#5d6672">Your price ${PHASES[chartPhase].toLowerCase()} departure</text>`+
+    `<line x1="${X(RIVAL[chartPhase])}" x2="${X(RIVAL[chartPhase])}" y1="${T}" y2="${H-B}" stroke="var(--riv)" stroke-dasharray="4 4"/><text x="${X(RIVAL[chartPhase])+4}" y="${T+10}" font-size="11" fill="var(--riv)">rival €${RIVAL[chartPhase]}</text>`+
+    `<path d="${path}" fill="none" stroke="var(--me)" stroke-width="2.5"/>`+
+    `<circle cx="${X(xs[bi])}" cy="${Y(ys[bi])}" r="4" fill="#fff" stroke="var(--good)" stroke-width="2"/><text x="${X(xs[bi])}" y="${Y(ys[bi])-9}" text-anchor="middle" font-size="11" fill="var(--good)">best here €${xs[bi]}</text>`+
+    `<circle cx="${X(p[chartPhase])}" cy="${Y(cur)}" r="6" fill="var(--me)"/>`;
+}
+function niceStep(r){const e=Math.pow(10,Math.floor(Math.log10(r)));const f=r/e;return (f<1.5?1:f<3?2:f<7?5:10)*e;}
+</script>
+</body>
+</html>
